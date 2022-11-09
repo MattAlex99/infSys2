@@ -51,44 +51,8 @@ class WritingManager {
          return currentArticles
        }
 
-
-
-
   }
 
-
-
-  def readFileByLine(path:String):Unit={
-    println("Start reading files")
-    val is = new FileInputStream(path)
-    try {
-      var lineCount=0
-      val gson = new Gson
-      val scanner = new Scanner(is, StandardCharsets.UTF_8.name())
-      val setManager = new SetQuerryManaget
-      scanner.nextLine() //skipps first empty line
-      while (scanner.hasNextLine) { // Printing the content of file
-        //TimeKeeper.checkTime()
-        lineCount=lineCount+1
-        if (lineCount%1000==0){
-          println("current line "+ lineCount)
-          println(java.time.LocalDateTime.now().toString)
-        }
-        //writing and deserialisation from here on
-        val rawLineString=scanner.nextLine.replaceAll("[^\\x00-\\x7F]", "?")
-        rawLineString match {
-          case "]" =>
-          case "[" =>
-          case _ => val clearedLineString = removeLeadingComma(rawLineString)
-                    val currentArticle: Article = gson.fromJson(clearedLineString, classOf[Article])
-                    ////writing starts here
-
-                //    setManager.insertArticle(currentArticle)
-
-        }
-        }
-    }
-  }
 
   @tailrec
   final def removeLeadingComma(string: String):String = {

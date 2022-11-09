@@ -30,11 +30,11 @@ object Main {
 
 
 
-    //val jedis = new Jedis("127.0.0.1", 6379,50000)
-    //println(jedis.get("authorIdToInformation:1983837166"))
 
-    //val writingManager = new WritingManager
-    //writingManager.processFileBatchWise("D:\\Uni\\Master1\\Inf-Sys\\dblp.v12.json/dblp.v12.json")
+
+
+   val writingManager = new WritingManager
+   writingManager.processFileBatchWise("D:\\Uni\\Master1\\Inf-Sys\\dblp.v12.json/dblp.v12.json")
 
     }
 }

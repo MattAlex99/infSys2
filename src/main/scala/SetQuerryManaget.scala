@@ -187,22 +187,6 @@ class SetQuerryManaget {
   }
 
 
-  def getNumberOfArticlesWritenByEachAuthorInBatch(allArticles:util.ArrayList[Article]):util.HashMap[Long,Integer]={
-    val countMap = new util.HashMap[Long,Integer]()
-    allArticles.forEach(article=> countAuthorContributions(article,countMap))
-    return countMap
-  }
-
-  def countAuthorContributions(article: Article,countMap:util.HashMap[Long,Integer]):Unit={
-    article.authors.forEach(author => {
-        countMap.containsKey(author) match{
-          case false => countMap.put(author.id,1)
-          case true => val authorsCurrentCount=countMap.get(author)
-                        countMap.put(author.id,authorsCurrentCount+1)
-                     // print(author)
-        }
-    })
-  }
 
   def getAlreadyExistingAuthorsOfBatch(articleBatch:util.ArrayList[Article],pipeline: Pipeline):util.ArrayList[(Author,Response[String])] = {
     val resultList = new util.ArrayList[(Author,Response[String])]
@@ -242,77 +226,8 @@ class SetQuerryManaget {
     }
   }
 
-  //def getAuthorSetString(author: Author,previousAuthorEntry:String): String = {
-  //  //val previousAuthorEntry = jedis.get(getAuthorKey(author))
-  //  previousAuthorEntry match {
-  //    case null => Author.getAuthorJsonString(author)
-  //    case _ => val authorCounting = gson.fromJson(previousAuthorEntry, classOf[AuthorCounting])
-  //      //create a new string with incremented articles count
-  //      val autorToBeWritten = new AuthorCounting(authorCounting.name, authorCounting.org, authorCounting.numArticles + 1)
-  //      return gson.toJson(autorToBeWritten)
-  //  }
-  //}
 
 
- //def insertArticle(article:Article):Unit={
- //  //val t = jedis.multi()
-
- //  //stores articleID to articleInfo (articleInfo relpaced with articleID)
- //  //solves titleByID(articleID: Long): String
- //  val strippedArticle = StripedArticle.stripArticle(article)
- //  val articleString= gson.toJson(strippedArticle) //references stil need to be removed
- //  jedis.set(getArticleIdToInformationKey(article),articleString)
-
- //  //stores information authorID to authorInfo
- //  article.authors.foreach(author => writeAuthor(author))
-
- //  //solves articles(authorID: Long): List[Article]
- //  article.authors.foreach(author =>adjustAuthorsToArticleList(author,article.id.toString))
-
- //  //solves referencedBy(articleID: Long): List[Article]
-
-
- //  //t.exec();
- //  //t.hset("article:IdToJson", article.id.toString, article.title)
-
- //  //store the list of references from each article as string
- //  //für jeden article in references
-
- //  //article.references.foreach(ref => t.set())
- //}
-
-
-
-
-
- //def writeAuthor(author:Author):Unit={
- //  //add author for authorID to Author Information DB
- //  val newAutorString =determineAuthorSetString(author)
- //  jedis.set(getAuthorKey(author),newAutorString)
- //}
- // def determineAuthorSetString(author:Author): String ={
- //   val authorEntry = jedis.get(getAuthorKey(author))
-//
- //   authorEntry match {
- //     case null =>  Author.getAuthorJsonString(author)
-//
- //     case _ => val authorCounting = gson.fromJson(authorEntry,classOf[AuthorCounting])
- //               //create a new string with incremented articles count
- //               val autorToBeWritten= new AuthorCounting(authorCounting.name,authorCounting.org,authorCounting.numArticles+1)
- //               return gson.toJson(autorToBeWritten)
- //   }
- // }
-
-  def getAuthorsString(authors:util.ArrayList[Author]):String={
-    authors.size() match {
-      case 0 => return "[]"
-      case 1 => return "["+Author.getAuthorJsonString(authors.get(0))+"]"
-      case _ => return getAuthorsStringInner(authors,
-                                    "["+Author.getAuthorJsonString(authors.get(0)),
-                                        1)
-    }
-
-  }
   def getAuthorsStringInner(authors:util.ArrayList[Author],currentString:String, iteration:Integer):String= {
       iteration == authors.size match {
       case true => return currentString + "]"
@@ -320,18 +235,7 @@ class SetQuerryManaget {
         currentString + "," + Author.getAuthorJsonString(authors.get(iteration)),iteration+1)
     }
   }
-    def insertIntoAuthor(author: Author): Unit = {
-      val t = jedis.multi()
-      //track to dstinct authors
-      t.pfadd("distinctAuthors", author.id.toString)
-      t.exec();
 
-    }
-
-    def insertReference(reference: Reference): Unit = {
-      val t = jedis.multi()
-      t.exec();
-    }
 
 
 }
