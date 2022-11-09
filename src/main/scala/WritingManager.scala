@@ -12,7 +12,7 @@ import scala.annotation.tailrec
 
 class WritingManager {
     val batchSize=3000
-    val jedis=new Jedis("127.0.0.1", 6379)
+    val jedis=new Jedis("127.0.0.1", 6379,5000000)
 
   def processFileBatchWise(path:String):Unit={
     jedis.set("highestNumberOfArticlesWritten","1")
@@ -23,8 +23,8 @@ class WritingManager {
     while (scanner.hasNextLine){
       val setManager = new SetQuerryManaget()
       val currentBatch = getBatches(0,batchSize,new util.ArrayList[String](),scanner)
-      //if (currentIteration>1356)
-        setManager.processBatch(currentBatch)
+
+      setManager.processBatch(currentBatch)
       println("batch "+currentIteration+" has been processed")
       currentIteration=currentIteration+1
       println(java.time.LocalDateTime.now().toString)

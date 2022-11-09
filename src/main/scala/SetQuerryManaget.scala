@@ -9,7 +9,7 @@ import scala.annotation.tailrec
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
 class SetQuerryManaget {
-  val jedis = new Jedis("127.0.0.1", 6379,5000)
+  val jedis = new Jedis("127.0.0.1", 6379,500000)
   //val pipeline = jedis.pipelined()
   val gson = new Gson()
 
@@ -75,6 +75,14 @@ class SetQuerryManaget {
                     pipeline)
   }
 
+
+  def AuthorListContainsID(authorList:util.ArrayList[Author], authorid:Long):Boolean={
+    authorList.forEach(currentAuthor => {
+      if(currentAuthor.id==authorid)
+        return true
+    })
+    return false
+  }
   @tailrec
   final def addAuthorsInner(allAuthors:util.ArrayList[(Author,Response[String])],
                             currentHighestArticleCount:Integer,
@@ -83,7 +91,8 @@ class SetQuerryManaget {
                             mapOfNumberOfArticlesWrittenByAuthorInBatch:util.HashMap[Long,Integer],
                             pipeline:Pipeline):Unit={
     allAuthors.size() match {
-      case 0 =>
+      case 0 =>   //println("AddingMostAuthors")
+                  //println(authorsWithMostArticles)
                   setNewHighestNumberOfArticlesWritten(currentHighestArticleCount,pipeline)
                   addAuthorsToHighestArticleCount(authorsWithMostArticles,pipeline)
       case _ =>
@@ -93,31 +102,30 @@ class SetQuerryManaget {
                   //add authors for hyperloglol distinct counting
                   pipeline.pfadd("hyperLogLogDistinct", currentAuthor.id.toString)
 
-                  if (!alreadyProcessedAuthors.contains(currentAuthor)){
+                  if (!AuthorListContainsID(alreadyProcessedAuthors,currentAuthor.id)) {
                     alreadyProcessedAuthors.add(currentAuthor)
 
                     val stringForNewAuthorCounting=Author.getAuthorStringFromResonse(currentAuthor,currentResponse)
-                    try {
-                     val currentAuthorCountingTest = gson.fromJson(stringForNewAuthorCounting, classOf[AuthorCounting])
-                   } catch {
-                     case e:Exception => println("crash")
-                                          println(e)
-                                         println(stringForNewAuthorCounting)
-                                         println(currentAuthor)
-                   }
+
                     val currentAuthorCounting = gson.fromJson(stringForNewAuthorCounting, classOf[AuthorCounting])
                     //check how many articles have been written by this author in this batch
                     val currentAuthorCountOfArticlesWrittenInThisBatch = mapOfNumberOfArticlesWrittenByAuthorInBatch.get(currentAuthor.id)
                     val totalNumberofArticlesWritten = currentAuthorCounting.numArticles + currentAuthorCountOfArticlesWrittenInThisBatch
                     //write current Author with new Article Count
                     val newAuthorString = Author.getAuthorJsonString(currentAuthor,totalNumberofArticlesWritten)
-                    pipeline.set(getAuthorKey(currentAuthor),newAuthorString)
+                    //println("setting:"+nameManagement.getAuthorKey(currentAuthor) )
+                    pipeline.set(nameManagement.getAuthorKey(currentAuthor),newAuthorString)
+
 
                     if(totalNumberofArticlesWritten==currentHighestArticleCount){
                       authorsWithMostArticles.add(currentAuthor)
                     }
 
                     if (totalNumberofArticlesWritten > currentHighestArticleCount) {
+                      //println("new highest Score " +currentAuthor.id)
+                      //delete previous highscore List
+                      resetListOfAuthorsWithMostArticles(pipeline)
+                      //create a new List
                       val newMostArticlesList = new util.ArrayList[Author]()
                       newMostArticlesList.add(currentAuthor)
                       addAuthorsInner(allAuthors,
@@ -134,15 +142,15 @@ class SetQuerryManaget {
                         mapOfNumberOfArticlesWrittenByAuthorInBatch,
                         pipeline)
                     }
-                }
-        else{
-              addAuthorsInner(allAuthors,
-                currentHighestArticleCount,
-                authorsWithMostArticles,
-                alreadyProcessedAuthors,
-                mapOfNumberOfArticlesWrittenByAuthorInBatch,
-                pipeline)
                   }
+                  else{
+                    addAuthorsInner(allAuthors,
+                      currentHighestArticleCount,
+                      authorsWithMostArticles,
+                      alreadyProcessedAuthors,
+                      mapOfNumberOfArticlesWrittenByAuthorInBatch,
+                      pipeline)
+                        }
     }
 }
 
@@ -158,8 +166,12 @@ class SetQuerryManaget {
     if (!(authors==null))
       authors.forEach(author=> addAuthorToHighestArticleCountList(author.id,pipeline))
   }
+  def resetListOfAuthorsWithMostArticles(pipeline:Pipeline): Unit ={
+    pipeline.del("authorsWithMostArticles")
+  }
 
   def addAuthorToHighestArticleCountList(authorId: Long, pipeline: Pipeline): Unit = {
+    //println("adding author:" +authorId)
     pipeline.rpush("authorsWithMostArticles", authorId.toString)
   }
   def getHighestNumberofArticlesWritten(pipeline: Pipeline):Response[String] ={
@@ -171,7 +183,7 @@ class SetQuerryManaget {
 
   def addArticleIdToAuthors(article: Article,pipeline: Pipeline)={
     if (!(article.authors==null))
-      article.authors.forEach(author => pipeline.rpush(getArticleIdToAuthorsKey(article),author.id.toString))
+      article.authors.forEach(author => pipeline.rpush(nameManagement.getArticleIdToAuthorsKey(article),author.id.toString))
   }
 
 
@@ -187,7 +199,7 @@ class SetQuerryManaget {
           case false => countMap.put(author.id,1)
           case true => val authorsCurrentCount=countMap.get(author)
                         countMap.put(author.id,authorsCurrentCount+1)
-                      print(author)
+                     // print(author)
         }
     })
   }
@@ -199,12 +211,12 @@ class SetQuerryManaget {
   }
   def addArticleOfAuthor(authors:util.ArrayList[Author],currentResult:util.ArrayList[(Author,Response[String])], pipeline: Pipeline): Unit ={
     if(!(authors==null))
-      authors.forEach(author=> currentResult.add((author,pipeline.get(getAuthorKey(author)))))
+      authors.forEach(author=> currentResult.add((author,pipeline.get(nameManagement.getAuthorKey(author)))))
   }
   def insertArticleIdtoArticleContent(article: Article,pipeline:Pipeline): Unit ={
     val strippedArticle = StripedArticle.stripArticle(article)
     val articleString = gson.toJson(strippedArticle) //references stil need to be removed
-    pipeline.set(getArticleIdToInformationKey(article), articleString)
+    pipeline.set(nameManagement.getArticleIdToInformationKey(article), articleString)
   }
 
 
@@ -272,15 +284,7 @@ class SetQuerryManaget {
 
 
 
-  def getArticleIdToAuthorsKey(article:Article): String = {
-    return "articleIdToAuthors:" + article.id.toString
-  }
-  def getAuthorKey(author:Author):String={
-    return "authorIdToInformation:"+author.id.toString
-  }
-  def getArticleIdToInformationKey(article:Article):String={
-    return "articleIdToInformation"+article.id.toString
-  }
+
  //def writeAuthor(author:Author):Unit={
  //  //add author for authorID to Author Information DB
  //  val newAutorString =determineAuthorSetString(author)

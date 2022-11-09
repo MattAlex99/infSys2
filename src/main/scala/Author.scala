@@ -26,7 +26,7 @@ object Author{
 
   def getAuthorJsonString(author:Author,countArticles:Integer):String= {
     val AuthorString=Author.getCleanOrgString(author)
-    val result= "{"+"\"name\":\""+Author.getCleanNameString(author)+"\",\"org\":\""+AuthorString+"\","+ "\"numArticles\":\""+countArticles+"\"" +"}"
+    val result= "{"+"\"name\":\""+Author.getCleanNameString(author)+"\",\"org\":\""+AuthorString+"\","+ "\"numArticles\":\""+countArticles+"\"," +"\"id\":\""+author.id.toString+"\"}"
     return result
 
   }
