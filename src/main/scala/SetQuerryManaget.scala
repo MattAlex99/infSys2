@@ -21,29 +21,30 @@ class SetQuerryManaget {
     var pipeline = jedis.pipelined()
     var allArticles = articleStringsToArticles(currentBatch)
 
-    //fetch highest Number of Articles Written of any author
-    val previouslyHighestArticleCountResponse= getHighestNumberofArticlesWritten(pipeline)
 
-    //add article ID to ArticleContent
+
+    //add all article IDs to ArticleContent
     allArticles.forEach(article => insertArticleIdtoArticleContent(article, pipeline))
 
-    //add articleIdToAuthors
+    //add articleIdToAuthors structure
     allArticles.forEach(article=> addArticleIdToAuthors(article, pipeline))
 
     //check which authors already did write an article
     val alreadyExistingAuthorsOfBatch = getAlreadyExistingAuthorsOfBatch(allArticles,pipeline)
 
-    //add to referenced by Lists
+    //add to "article referenced by" Lists
     allArticles.forEach(currentArticle =>adjustArticleReferencesOfArticle(currentArticle,pipeline))
 
-    //add articles to Authors create darticle list
+    //add articles to Authors created article list
     allArticles.forEach(currentArticle =>adjustAuthorToArticleList(currentArticle,pipeline))
 
-
+    //fetch highest Number of Articles Written of any author
+    val previouslyHighestArticleCountResponse = getHighestNumberofArticlesWritten(pipeline)
     pipeline.sync()
 
     val secondPipeline = jedis.pipelined()
     val previouslyHighestArticleCount = previouslyHighestArticleCountResponse.get()
+    //add authors, count how many articles they have written and update article written higscore List
     addAuthors(alreadyExistingAuthorsOfBatch,previouslyHighestArticleCount.toInt,secondPipeline)
     secondPipeline.sync()
 
